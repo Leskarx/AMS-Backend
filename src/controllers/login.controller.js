@@ -34,7 +34,7 @@ async function loginUser(req, res, next) {
     // Generate JWT token
     const token = jwt.sign(
       { 
-        userId: savedUser._id,  // Mongoose uses _id instead of id
+        userId: savedUser._id,  
         email: savedUser.email,
         role: savedUser.role 
       },
@@ -46,10 +46,10 @@ async function loginUser(req, res, next) {
     return res.status(200).json({
       message: "login success",
       user: {
-        id: savedUser._id,      // Mongoose uses _id
+        id: savedUser._id,      
         email: savedUser.email,
-        name: savedUser.name,   // Include name from your schema
-        role: savedUser.role    // Include role for frontend authorization
+        name: savedUser.name,    
+        role: savedUser.role     
       },
       token: token
     });
