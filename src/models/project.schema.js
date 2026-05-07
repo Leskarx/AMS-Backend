@@ -37,7 +37,7 @@ const projectSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ["DRAFT", "PENDING", "APPROVED", "REJECTED"],
-      default: "PENDING",
+      default: "DRAFT",
     },
 
     similarityScore: {
