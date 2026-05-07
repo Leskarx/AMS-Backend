@@ -5,9 +5,10 @@ import {
   updateProject,
   submitProject
 } from "../controllers/project.controller.js";
+import assignReviewer from "../controllers/assignReviewer.controller.js";
 
 import authMiddleware from "../middlewares/auth.middleware.js";
-
+import roleMiddleware from "../middlewares/role.middleware.js";
 import { validate } from "../middlewares/validate.middleware.js";
 
 import {
@@ -31,10 +32,19 @@ router.patch(
   updateProject
 );
 
+// Fixed the missing ); here
 router.patch(
   "/:id/submit",
   authMiddleware,
   submitProject
+);
+
+// Kept your teammate's new route
+router.put(
+  "/assign-reviewer/:projectId",
+  authMiddleware,
+  roleMiddleware(["ADMIN"]),
+  assignReviewer
 );
 
 export default router;

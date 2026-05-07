@@ -14,6 +14,8 @@ import jwt from "jsonwebtoken"
         // const user = await User.findById(decoded.id).select("-password")
     
         req.user = decoded
+        console.log("Authenticated user:", req.user);
+        
     
         next()
     
