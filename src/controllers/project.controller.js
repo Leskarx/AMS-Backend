@@ -3,7 +3,6 @@ import ApiError from "../utils/ApiError.js";
 
 export const createProject = async (req, res, next) => {
   try {
-
     const projectData = {
       ...req.body,
       ownerId: req.user.userId, 
@@ -28,10 +27,8 @@ export const createProject = async (req, res, next) => {
   }
 };
 
-
 export const updateProject = async (req, res, next) => {
   try {
-
     const project = await Project.findById(req.params.id);
 
     if (!project) {
@@ -56,7 +53,6 @@ export const updateProject = async (req, res, next) => {
 
     // Recalculate budget total AFTER merge
     if (project.budget) {
-
       project.budget.total =
         (project.budget.nonRecurring || 0) +
         (project.budget.recurring || 0) +
@@ -84,7 +80,6 @@ export const updateProject = async (req, res, next) => {
 
 export const submitProject = async (req, res, next) => {
   try {
-
     const project = await Project.findById(req.params.id);
 
     if (!project) {
@@ -100,6 +95,14 @@ export const submitProject = async (req, res, next) => {
     if (project.status !== "DRAFT") {
       throw new ApiError(
         "Project already submitted",
+        400
+      );
+    }
+
+    // to check whether complete
+    if (!project.objectives || project.objectives.length === 0) {
+      throw new ApiError(
+        "Project is incomplete. At least one objective is required before submission.",
         400
       );
     }
