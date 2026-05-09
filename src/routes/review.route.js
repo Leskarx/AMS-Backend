@@ -3,6 +3,7 @@ import authMiddleware from "../middlewares/auth.middleware.js";
 import { validate } from "../middlewares/validate.middleware.js";
 import { submitReviewSchema } from "../validators/review.validator.js";
 import submitReviewController from "../controllers/submitReview.controller.js";
+import getReviewerDashboard from "../controllers/getReviewerDashboard.controller.js";
 
 // import {
 //   getAssignedProjects,
@@ -20,7 +21,7 @@ router.use(authMiddleware);
 router.use(roleMiddleware("REVIEWER"));
 
 // // Dashboard overview
-// router.get("/dashboard", getReviewerDashboard);
+router.get("/dashboard", getReviewerDashboard);
 
 // // Get all assigned projects
 // router.get("/assigned-projects", getAssignedProjects);
