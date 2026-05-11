@@ -57,5 +57,7 @@ const projectSchema = new mongoose.Schema(
 projectSchema.index({ ownerId: 1 });
 projectSchema.index({ status: 1 });
 projectSchema.index({ title: "text", introduction: "text" });
+projectSchema.index({ status: 1, assignedReviewerId: 1 });
+projectSchema.index({ assignedReviewerId: 1, status: 1 });
 
 export default mongoose.model("Project", projectSchema);
