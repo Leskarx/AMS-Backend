@@ -4,7 +4,7 @@ import ApiError from "../utils/ApiError.js";
 
 async function resetPasswordController(req, res, next) {
   try {
-
+    
     const { currentPassword, newPassword } = req.body;
 
     if (!currentPassword || !newPassword) {

@@ -9,6 +9,10 @@ import {
   getUserStatistics
 } from "../controllers/userManagement.controller.js";
 
+import { getUnassignedProposals,
+          getReviewersWithWorkload
+} from "../controllers/reviewerProposalManagement.controller.js";
+
 const router = Router();
 
 // All user management routes require admin access
@@ -20,8 +24,18 @@ router.get("/users/statistics", getUserStatistics);
 router.get("/users", getAllUsers);  // This should be before /:userId
 
 // Parameter routes (these go AFTER specific routes)
-router.get("/:userId", getUserById);
-router.patch("/:userId/role", updateUserRole);
-router.delete("/:userId", deleteUser);
+router.get("/id/:userId", getUserById);
+router.patch("/id/:userId/role", updateUserRole);
+router.delete("/id/:userId", deleteUser);
+
+router.get(
+    "/unassigned-proposals", 
+    getUnassignedProposals
+  );
+
+  router.get(
+    "/reviewers", 
+    getReviewersWithWorkload
+  );
 
 export default router;
