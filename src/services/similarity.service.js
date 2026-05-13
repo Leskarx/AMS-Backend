@@ -1,8 +1,7 @@
 import axios from 'axios';
-import Similarity from '../models/similarity.schema.js';
 import Project from '../models/project.schema.js';
 
-const SIMILARITY_SERVER_URL = process.env.SURL || 'http://localhost:5000';
+const SIMILARITY_SERVER_URL = process.env.SIMILARITY_SERVER_URL || 'http://localhost:5000';
 
 export const checkSimilarityWithPythonServer = async (projectData) => {
   try {
@@ -36,30 +35,15 @@ export const saveSimilarityResults = async (projectId, similarityResults) => {
       return null;
     }
 
-    const matches = similarityResults.results.map(result => ({
-      projectId: result.proposal_id,
-      score: result.similarity_score
-    }));
-
-    const similarityScore = similarityResults.results[0]?.similarity_score || 0;
-
-    // Save to similarity collection
-    const similarityDoc = await Similarity.findOneAndUpdate(
-      { projectId },
-      {
-        projectId,
-        similarityScore,
-        matches
-      },
-      { upsert: true, new: true }
-    );
+    const highestMatch = similarityResults.results[0];
+    const similarityScore = highestMatch ? highestMatch.similarity_score : 0;
 
     // Update project's similarityScore field
     await Project.findByIdAndUpdate(projectId, {
       similarityScore: similarityScore
     });
 
-    return similarityDoc;
+    return { similarityScore, matches: similarityResults.results };
   } catch (error) {
     console.error('Error saving similarity results:', error.message);
     return null;
