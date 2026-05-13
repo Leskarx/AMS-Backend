@@ -27,13 +27,14 @@ export const getAllUsers = async (req, res, next) => {
       query.isActive = req.query.isActive === "true";
     }
     
-    // Search by name or email or institution
+    // Search by name, email, institution, department, or expertise
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: "i" } },
         { email: { $regex: search, $options: "i" } },
         { institution: { $regex: search, $options: "i" } },
-        { department: { $regex: search, $options: "i" } }
+        { department: { $regex: search, $options: "i" } },
+        { expertise: { $regex: search, $options: "i" } }
       ];
     }
 
@@ -91,10 +92,15 @@ export const getAllUsers = async (req, res, next) => {
             status: { $in: ["APPROVED", "REJECTED"] }
           });
           
+          const pendingReviews = await Project.countDocuments({
+            assignedReviewerId: user._id,
+            status: "UNDER_REVIEW"
+          });
+          
           projectStats = {
             assignedProjects,
             completedReviews,
-            pendingReviews: assignedProjects - completedReviews
+            pendingReviews
           };
         }
         
@@ -103,9 +109,9 @@ export const getAllUsers = async (req, res, next) => {
           name: user.name,
           email: user.email,
           role: user.role,
-          institution: user.institution,
-          department: user.department,
-          expertise: user.expertise,
+          institution: user.institution || "Not specified",
+          department: user.department || "Not specified",
+          expertise: user.expertise || [],
           isActive: user.isActive,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
@@ -155,7 +161,7 @@ export const getUserById = async (req, res, next) => {
     let projects = [];
     if (user.role === "SCIENTIST") {
       projects = await Project.find({ ownerId: user._id })
-        .select("uniqueCode title status createdAt similarityScore version")
+        .select("uniqueCode title status createdAt similarityScore version stationOrCollege")
         .sort({ createdAt: -1 });
     }
     
@@ -172,9 +178,9 @@ export const getUserById = async (req, res, next) => {
       name: user.name,
       email: user.email,
       role: user.role,
-      institution: user.institution,
-      department: user.department,
-      expertise: user.expertise,
+      institution: user.institution || "Not specified",
+      department: user.department || "Not specified",
+      expertise: user.expertise || [],
       isActive: user.isActive,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
@@ -205,6 +211,11 @@ export const updateUserRole = async (req, res, next) => {
     // Prevent changing own role
     if (userId === req.user.userId) {
       return res.status(400).json({ message: "You cannot change your own role" });
+    }
+    
+    // If changing from REVIEWER to something else, clear expertise
+    if (user.role === "REVIEWER" && role !== "REVIEWER") {
+      user.expertise = [];
     }
     
     user.role = role;
@@ -256,6 +267,7 @@ export const updateUserStatus = async (req, res, next) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role,
         isActive: user.isActive
       }
     });
@@ -323,7 +335,7 @@ export const getUserStatistics = async (req, res, next) => {
       User.find()
         .sort({ createdAt: -1 })
         .limit(5)
-        .select("name email role institution createdAt isActive")
+        .select("name email role institution department expertise createdAt isActive")
     ]);
     
     return res.status(200).json({
@@ -338,7 +350,9 @@ export const getUserStatistics = async (req, res, next) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        institution: user.institution,
+        institution: user.institution || "Not specified",
+        department: user.department || "Not specified",
+        expertise: user.expertise || [],
         isActive: user.isActive,
         joinedAt: user.createdAt
       }))

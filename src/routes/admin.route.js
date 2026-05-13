@@ -18,6 +18,7 @@ const router = Router();
 // All user management routes require admin access
 router.use(authMiddleware);
 router.use(roleMiddleware(["ADMIN"]));
+// user management
 
 // IMPORTANT: Put specific routes BEFORE parameter routes
 router.get("/users/statistics", getUserStatistics);
@@ -28,6 +29,7 @@ router.get("/id/:userId", getUserById);
 router.patch("/id/:userId/role", updateUserRole);
 router.delete("/id/:userId", deleteUser);
 
+// reviewer proposal management
 router.get(
     "/unassigned-proposals", 
     getUnassignedProposals
@@ -39,5 +41,6 @@ router.get(
   );
 
   // proposal management
+  
 
 export default router;
