@@ -29,9 +29,15 @@ const projectSchema = new mongoose.Schema(
     // BASIC DETAILS
     // =================================
 
-    projectId: {
+    uniqueCode: {
       type: String,
       unique: true,
+      required: true,
+    },
+    version: {
+      type: Number,
+      default: 1,
+      min: 1,
     },
 
     proposalType: {
