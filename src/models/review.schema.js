@@ -16,18 +16,37 @@ const reviewSchema = new mongoose.Schema(
 
     decision: {
       type: String,
-      enum: ["APPROVED", "REJECTED"],
+      enum: [
+        "APPROVED",
+        "REJECTED",
+        "REVISION_REQUIRED",
+      ],
       required: true,
     },
 
     comment: {
       type: String,
       required: true,
+      trim: true,
+    },
+
+    score: {
+      type: Number,
+      min: 1,
+      max: 10,
+    },
+
+    reviewedAt: {
+      type: Date,
+      default: Date.now,
     },
   },
   { timestamps: true }
 );
 
-reviewSchema.index({ projectId: 1 });
+reviewSchema.index({
+  projectId: 1,
+  reviewerId: 1,
+});
 
 export default mongoose.model("Review", reviewSchema);

@@ -38,4 +38,6 @@ router.get(
     getReviewersWithWorkload
   );
 
+  // proposal management
+
 export default router;

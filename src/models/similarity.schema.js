@@ -8,7 +8,10 @@ const similaritySchema = new mongoose.Schema(
       required: true,
     },
 
-    similarityScore: Number,
+    similarityScore: {
+      type: Number,
+      default: 0,
+    },
 
     matches: [
       {
@@ -16,9 +19,17 @@ const similaritySchema = new mongoose.Schema(
           type: mongoose.Schema.Types.ObjectId,
           ref: "Project",
         },
+
         score: Number,
+
+        matchedTextPreview: String,
       },
     ],
+
+    checkedAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
   { timestamps: true }
 );
