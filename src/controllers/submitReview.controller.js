@@ -4,7 +4,7 @@ import Project from "../models/project.schema.js";
 import User from "../models/user.schema.js";
 import mongoose from "mongoose";
 
- const submitReview = async (req, res, next) => {
+const submitReview = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -13,9 +13,9 @@ import mongoose from "mongoose";
     const { decision, comment } = req.body;
     const reviewerId = req.user.userId;
 
-    // Validate input
-    if (!decision || !["APPROVED", "REJECTED"].includes(decision)) {
-      throw new ApiError("Invalid decision. Must be APPROVED or REJECTED", 400);
+    // Validate input - updated to include REVISION_REQUIRED
+    if (!decision || !["APPROVED", "REJECTED", "REVISION_REQUIRED"].includes(decision)) {
+      throw new ApiError("Invalid decision. Must be APPROVED, REJECTED, or REVISION_REQUIRED", 400);
     }
 
     if (!comment || comment.trim().length < 10) {
@@ -39,8 +39,8 @@ import mongoose from "mongoose";
       throw new ApiError("This project is not assigned to you", 403);
     }
 
-    // Check if project status is PENDING
-    if (project.status !== "PENDING") {
+    // Check if project status is SUBMITTED or UNDER_REVIEW (updated from PENDING)
+    if (project.status !== "SUBMITTED" && project.status !== "UNDER_REVIEW") {
       throw new ApiError(`Cannot review project with status: ${project.status}`, 400);
     }
 
@@ -50,24 +50,45 @@ import mongoose from "mongoose";
       throw new ApiError("You have already reviewed this project", 400);
     }
 
-    // Create review
+    // Create review with reviewedAt field
     const review = await Review.create([{
       projectId,
       reviewerId,
       decision,
-      comment: comment.trim()
+      comment: comment.trim(),
+      reviewedAt: new Date()
     }], { session });
 
-    // Update project status
-    project.status = decision;
-    await project.save({ session });
+    // Update project status and relevant fields
+    let updateData = { status: decision };
+    
+    if (decision === "APPROVED") {
+      updateData.approvedAt = new Date();
+      updateData.finalComment = comment.trim();
+    } else if (decision === "REJECTED") {
+      updateData.rejectedAt = new Date();
+      updateData.finalComment = comment.trim();
+    } else if (decision === "REVISION_REQUIRED") {
+      updateData.finalComment = comment.trim();
+    }
+    
+    const updatedProject = await Project.findByIdAndUpdate(
+      projectId,
+      updateData,
+      { session, new: true }
+    );
 
     await session.commitTransaction();
 
     return res.status(201).json({
       message: `Project ${decision.toLowerCase()} successfully`,
-      review: review[0],
-      projectStatus: project.status
+      review: {
+        id: review[0]._id,
+        decision: review[0].decision,
+        comment: review[0].comment,
+        reviewedAt: review[0].reviewedAt
+      },
+      projectStatus: updatedProject.status
     });
 
   } catch (error) {
@@ -77,6 +98,5 @@ import mongoose from "mongoose";
     session.endSession();
   }
 };
-
 
 export default submitReview;
