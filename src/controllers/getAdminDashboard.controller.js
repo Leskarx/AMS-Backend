@@ -2,15 +2,17 @@ import Project from "../models/project.schema.js";
 import User from "../models/user.schema.js";
 import Review from "../models/review.schema.js";
 
- const getAdminDashboard = async (req, res, next) => {
+const getAdminDashboard = async (req, res, next) => {
   try {
     // Get all statistics in parallel
     const [
       totalProjects,
       draftProjects,
-      pendingProjects,
+      submittedProjects,
+      underReviewProjects,
       approvedProjects,
       rejectedProjects,
+      revisionRequiredProjects,
       totalScientists,
       totalReviewers,
       totalAdmins,
@@ -21,9 +23,11 @@ import Review from "../models/review.schema.js";
       // Project counts
       Project.countDocuments(),
       Project.countDocuments({ status: "DRAFT" }),
-      Project.countDocuments({ status: "PENDING" }),
+      Project.countDocuments({ status: "SUBMITTED" }),
+      Project.countDocuments({ status: "UNDER_REVIEW" }),
       Project.countDocuments({ status: "APPROVED" }),
       Project.countDocuments({ status: "REJECTED" }),
+      Project.countDocuments({ status: "REVISION_REQUIRED" }),
       
       // User counts by role
       User.countDocuments({ role: "SCIENTIST" }),
@@ -37,15 +41,15 @@ import Review from "../models/review.schema.js";
       Project.find()
         .sort({ createdAt: -1 })
         .limit(5)
-        .populate("ownerId", "name email")
+        .populate("ownerId", "name email institution")
         .populate("assignedReviewerId", "name email")
-        .select("title status discipline createdAt similarityScore"),
+        .select("uniqueCode title status discipline createdAt similarityScore stationOrCollege"),
       
       // 5 most recent reviews
       Review.find()
-        .sort({ createdAt: -1 })
+        .sort({ reviewedAt: -1 })
         .limit(5)
-        .populate("projectId", "title")
+        .populate("projectId", "title uniqueCode")
         .populate("reviewerId", "name email")
     ]);
 
@@ -95,16 +99,16 @@ import Review from "../models/review.schema.js";
       }
     ]);
 
-    // Get unassigned pending projects
+    // Get unassigned submitted projects (not under review yet)
     const unassignedProjects = await Project.countDocuments({
-      status: "PENDING",
+      status: "SUBMITTED",
       assignedReviewerId: null
     });
 
     // Get reviewers workload
     const reviewerWorkload = await User.aggregate([
       {
-        $match: { role: "REVIEWER" }
+        $match: { role: "REVIEWER", isActive: true }
       },
       {
         $lookup: {
@@ -124,7 +128,7 @@ import Review from "../models/review.schema.js";
               $filter: {
                 input: "$assignedProjects",
                 as: "project",
-                cond: { $eq: ["$$project.status", "PENDING"] }
+                cond: { $in: ["$$project.status", ["SUBMITTED", "UNDER_REVIEW"]] }
               }
             }
           }
@@ -143,9 +147,11 @@ import Review from "../models/review.schema.js";
         projects: {
           total: totalProjects,
           draft: draftProjects,
-          pending: pendingProjects,
+          submitted: submittedProjects,
+          underReview: underReviewProjects,
           approved: approvedProjects,
           rejected: rejectedProjects,
+          revisionRequired: revisionRequiredProjects,
           unassigned: unassignedProjects
         },
         users: {
@@ -161,21 +167,26 @@ import Review from "../models/review.schema.js";
       },
       recentProjects: recentProjects.map(project => ({
         id: project._id,
+        uniqueCode: project.uniqueCode,
         title: project.title,
         discipline: project.discipline || "Not specified",
+        stationOrCollege: project.stationOrCollege,
         status: project.status,
         similarityScore: project.similarityScore || 0,
         submittedBy: project.ownerId?.name || "Unknown",
+        submittedByInstitution: project.ownerId?.institution,
         assignedTo: project.assignedReviewerId?.name || "Not assigned",
         submittedDate: project.createdAt
       })),
       recentReviews: recentReviews.map(review => ({
         id: review._id,
         proposalTitle: review.projectId?.title || "Unknown",
+        proposalCode: review.projectId?.uniqueCode,
         decision: review.decision,
-        comment: review.comment.substring(0, 100) + (review.comment.length > 100 ? "..." : ""),
+        comment: review.comment ? (review.comment.substring(0, 100) + (review.comment.length > 100 ? "..." : "")) : "",
+        score: review.score,
         reviewedBy: review.reviewerId?.name || "Unknown",
-        reviewedAt: review.createdAt
+        reviewedAt: review.reviewedAt
       })),
       charts: {
         topDisciplines: disciplineStats.map(item => ({
