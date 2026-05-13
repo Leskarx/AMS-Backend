@@ -212,15 +212,13 @@ const projectSchema = new mongoose.Schema(
 // AUTO CALCULATE GRAND TOTAL
 // =================================
 
-projectSchema.pre("save", function (next) {
+projectSchema.pre("save", function () {
   this.budget.grandTotal =
     (this.budget.nonRecurring || 0) +
     (this.budget.recurringContingency || 0) +
     (this.budget.travellingAllowances || 0) +
     (this.budget.operationalExpenses || 0) +
     (this.budget.manpower || 0);
-
-  next();
 });
 
 // =================================
