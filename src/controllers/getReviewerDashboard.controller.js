@@ -23,17 +23,18 @@ const getReviewerDashboard = async (req, res, next) => {
       Review.find({ reviewerId }).countDocuments()
     ]);
 
-    // Get pending projects - updated to SUBMITTED and UNDER_REVIEW
+    // Get pending projects for review - ONLY UNDER_REVIEW status
+    // A reviewer should only see projects that are actively assigned to them for review
     const pendingProjects = await Project.find({
       assignedReviewerId: reviewerId,
-      status: { $in: ["SUBMITTED", "UNDER_REVIEW"] }
+      status: "UNDER_REVIEW"  // Changed from $in to just "UNDER_REVIEW"
     })
     .populate("ownerId", "name email institution department")
     .sort({ createdAt: 1 })
     .limit(10)
     .select("uniqueCode title discipline status similarityScore createdAt stationOrCollege");
 
-    // Get recent reviews
+    // Get recent reviews (already reviewed projects)
     const recentReviews = await Review.find({ reviewerId })
       .populate("projectId", "title uniqueCode")
       .sort({ reviewedAt: -1 })

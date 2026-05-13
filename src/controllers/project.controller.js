@@ -38,7 +38,7 @@ export const createProject = async (req, res, next) => {
     const projectData = {
       ...req.body,
       ownerId: req.user.userId, 
-      status: "DRAFT",
+      status: "SUBMITTED",
       uniqueCode: req.body.uniqueCode || generatedUniqueCode || `PROJ-${Date.now()}`
     };
 

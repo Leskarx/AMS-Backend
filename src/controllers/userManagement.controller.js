@@ -22,11 +22,18 @@ export const getAllUsers = async (req, res, next) => {
       query.role = role;
     }
     
-    // Search by name or email
+    // Filter by active status (optional)
+    if (req.query.isActive !== undefined) {
+      query.isActive = req.query.isActive === "true";
+    }
+    
+    // Search by name or email or institution
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } }
+        { email: { $regex: search, $options: "i" } },
+        { institution: { $regex: search, $options: "i" } },
+        { department: { $regex: search, $options: "i" } }
       ];
     }
 
@@ -53,18 +60,24 @@ export const getAllUsers = async (req, res, next) => {
         let projectStats = {};
         
         if (user.role === "SCIENTIST") {
-          const [total, pending, approved, rejected] = await Promise.all([
+          const [total, draft, submitted, underReview, approved, rejected, revisionRequired] = await Promise.all([
             Project.countDocuments({ ownerId: user._id }),
-            Project.countDocuments({ ownerId: user._id, status: "PENDING" }),
+            Project.countDocuments({ ownerId: user._id, status: "DRAFT" }),
+            Project.countDocuments({ ownerId: user._id, status: "SUBMITTED" }),
+            Project.countDocuments({ ownerId: user._id, status: "UNDER_REVIEW" }),
             Project.countDocuments({ ownerId: user._id, status: "APPROVED" }),
-            Project.countDocuments({ ownerId: user._id, status: "REJECTED" })
+            Project.countDocuments({ ownerId: user._id, status: "REJECTED" }),
+            Project.countDocuments({ ownerId: user._id, status: "REVISION_REQUIRED" })
           ]);
           
           projectStats = {
             totalProjects: total,
-            pendingProjects: pending,
+            draftProjects: draft,
+            submittedProjects: submitted,
+            underReviewProjects: underReview,
             approvedProjects: approved,
-            rejectedProjects: rejected
+            rejectedProjects: rejected,
+            revisionRequiredProjects: revisionRequired
           };
         }
         
@@ -90,6 +103,10 @@ export const getAllUsers = async (req, res, next) => {
           name: user.name,
           email: user.email,
           role: user.role,
+          institution: user.institution,
+          department: user.department,
+          expertise: user.expertise,
+          isActive: user.isActive,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
           ...projectStats
@@ -123,11 +140,10 @@ export const getUserById = async (req, res, next) => {
   try {
     const { userId } = req.params;
     
-        // Validate ObjectId format first
-        if (!mongoose.Types.ObjectId.isValid(userId)) {
-            return res.status(400).json({ message: "Invalid user ID format" });
-          }
-      
+    // Validate ObjectId format first
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "Invalid user ID format" });
+    }
 
     const user = await User.findById(userId).select("-password");
     
@@ -139,7 +155,7 @@ export const getUserById = async (req, res, next) => {
     let projects = [];
     if (user.role === "SCIENTIST") {
       projects = await Project.find({ ownerId: user._id })
-        .select("title status createdAt similarityScore")
+        .select("uniqueCode title status createdAt similarityScore version")
         .sort({ createdAt: -1 });
     }
     
@@ -147,7 +163,7 @@ export const getUserById = async (req, res, next) => {
     let assignedProjects = [];
     if (user.role === "REVIEWER") {
       assignedProjects = await Project.find({ assignedReviewerId: user._id })
-        .select("title status ownerId createdAt")
+        .select("uniqueCode title status ownerId createdAt")
         .populate("ownerId", "name email");
     }
     
@@ -156,6 +172,10 @@ export const getUserById = async (req, res, next) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      institution: user.institution,
+      department: user.department,
+      expertise: user.expertise,
+      isActive: user.isActive,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       projects: user.role === "SCIENTIST" ? projects : undefined,
@@ -196,7 +216,47 @@ export const updateUserRole = async (req, res, next) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        institution: user.institution,
+        department: user.department
+      }
+    });
+    
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Update user status (activate/deactivate)
+export const updateUserStatus = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const { isActive } = req.body;
+    
+    if (typeof isActive !== "boolean") {
+      return res.status(400).json({ message: "isActive must be a boolean" });
+    }
+    
+    // Prevent deactivating own account
+    if (userId === req.user.userId && isActive === false) {
+      return res.status(400).json({ message: "You cannot deactivate your own account" });
+    }
+    
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    
+    user.isActive = isActive;
+    await user.save();
+    
+    return res.status(200).json({
+      message: `User ${isActive ? "activated" : "deactivated"} successfully`,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        isActive: user.isActive
       }
     });
     
@@ -254,14 +314,16 @@ export const deleteUser = async (req, res, next) => {
 // Get user statistics for admin dashboard
 export const getUserStatistics = async (req, res, next) => {
   try {
-    const [totalScientists, totalReviewers, totalAdmins, recentUsers] = await Promise.all([
+    const [totalScientists, totalReviewers, totalAdmins, activeUsers, inactiveUsers, recentUsers] = await Promise.all([
       User.countDocuments({ role: "SCIENTIST" }),
       User.countDocuments({ role: "REVIEWER" }),
       User.countDocuments({ role: "ADMIN" }),
+      User.countDocuments({ isActive: true }),
+      User.countDocuments({ isActive: false }),
       User.find()
         .sort({ createdAt: -1 })
         .limit(5)
-        .select("name email role createdAt")
+        .select("name email role institution createdAt isActive")
     ]);
     
     return res.status(200).json({
@@ -269,11 +331,15 @@ export const getUserStatistics = async (req, res, next) => {
       scientists: totalScientists,
       reviewers: totalReviewers,
       admins: totalAdmins,
+      activeUsers,
+      inactiveUsers,
       recentUsers: recentUsers.map(user => ({
         id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
+        institution: user.institution,
+        isActive: user.isActive,
         joinedAt: user.createdAt
       }))
     });

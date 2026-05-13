@@ -18,6 +18,11 @@ const assignReviewer = async (req, res, next) => {
       throw new ApiError(`Cannot assign reviewer to a ${project.status.toLowerCase()} project`, 400);
     }
     
+    // Check if project is already under review
+    if (project.status === "UNDER_REVIEW") {
+      throw new ApiError("Project already has a reviewer assigned", 400);
+    }
+    
     // Find the reviewer
     const reviewer = await User.findById(reviewerId);
     if (!reviewer) {
@@ -29,13 +34,9 @@ const assignReviewer = async (req, res, next) => {
       throw new ApiError("User must have REVIEWER role", 400);
     }
     
-    // Assign reviewer to project
+    // Assign reviewer to project and change status to UNDER_REVIEW
     project.assignedReviewerId = reviewerId;
-    
-    // If project is DRAFT, change to SUBMITTED when assigning reviewer
-    if (project.status === "DRAFT") {
-      project.status = "SUBMITTED";
-    }
+    project.status = "UNDER_REVIEW";
     
     await project.save();
     
@@ -43,7 +44,7 @@ const assignReviewer = async (req, res, next) => {
     await project.populate("assignedReviewerId", "name email");
     
     return res.status(200).json({
-      message: "Reviewer assigned successfully",
+      message: "Reviewer assigned successfully. Project is now under review.",
       project: {
         id: project._id,
         uniqueCode: project.uniqueCode,
