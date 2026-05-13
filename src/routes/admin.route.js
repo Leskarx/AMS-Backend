@@ -8,6 +8,12 @@ import {
   deleteUser,
   getUserStatistics
 } from "../controllers/userManagement.controller.js";
+import {
+  getAllProjects,
+  getProjectById,
+  deleteProject,
+  getProjectStatistics
+} from "../controllers/proposalManagement.controller.js";
 
 const router = Router();
 
@@ -18,6 +24,18 @@ router.use(roleMiddleware(["ADMIN"]));
 // IMPORTANT: Put specific routes BEFORE parameter routes
 router.get("/users/statistics", getUserStatistics);
 router.get("/users", getAllUsers);  // This should be before /:userId
+
+/* =========================
+   PROPOSAL MANAGEMENT ROUTES
+========================= */
+
+router.get("/projects/statistics", getProjectStatistics);
+
+router.get("/projects", getAllProjects);
+
+router.get("/projects/:projectId", getProjectById);
+
+router.delete("/projects/:projectId", deleteProject);
 
 // Parameter routes (these go AFTER specific routes)
 router.get("/:userId", getUserById);
