@@ -14,8 +14,7 @@ const getReviewerDashboard = async (req, res, next) => {
     //   throw new ApiError("Access denied. Only reviewers can access this resource", 403);
     // }
 
-
-    // Get statistics
+    // Get statistics - updated status values
     const [assignedProjects, reviewsGiven] = await Promise.all([
       Project.find({ 
         assignedReviewerId: reviewerId,
@@ -24,22 +23,23 @@ const getReviewerDashboard = async (req, res, next) => {
       Review.find({ reviewerId }).countDocuments()
     ]);
 
-    // Get pending projects
+    // Get pending projects - updated to SUBMITTED and UNDER_REVIEW
     const pendingProjects = await Project.find({
       assignedReviewerId: reviewerId,
-      status: "PENDING"
+      status: { $in: ["SUBMITTED", "UNDER_REVIEW"] }
     })
-    .populate("ownerId", "name email")
+    .populate("ownerId", "name email institution department")
     .sort({ createdAt: 1 })
-    .limit(10);
+    .limit(10)
+    .select("uniqueCode title discipline status similarityScore createdAt stationOrCollege");
 
     // Get recent reviews
     const recentReviews = await Review.find({ reviewerId })
-      .populate("projectId", "title")
-      .sort({ createdAt: -1 })
+      .populate("projectId", "title uniqueCode")
+      .sort({ reviewedAt: -1 })
       .limit(5);
 
-    // Calculate approval/rejection rate
+    // Calculate approval/rejection/revision rates
     const approvedCount = await Review.countDocuments({ 
       reviewerId, 
       decision: "APPROVED" 
@@ -48,8 +48,12 @@ const getReviewerDashboard = async (req, res, next) => {
       reviewerId, 
       decision: "REJECTED" 
     });
+    const revisionCount = await Review.countDocuments({
+      reviewerId,
+      decision: "REVISION_REQUIRED"
+    });
     
-    const totalDecisions = approvedCount + rejectedCount;
+    const totalDecisions = approvedCount + rejectedCount + revisionCount;
     const approvalRate = totalDecisions > 0 
       ? Math.round((approvedCount / totalDecisions) * 100) 
       : 0;
@@ -61,10 +65,33 @@ const getReviewerDashboard = async (req, res, next) => {
         pendingReviews: assignedProjects - reviewsGiven,
         approvedCount,
         rejectedCount,
+        revisionCount,
         approvalRate
       },
-      pendingProjects,
-      recentReviews
+      pendingProjects: pendingProjects.map(project => ({
+        id: project._id,
+        uniqueCode: project.uniqueCode,
+        title: project.title,
+        discipline: project.discipline,
+        stationOrCollege: project.stationOrCollege,
+        status: project.status,
+        similarityScore: project.similarityScore,
+        submittedBy: {
+          name: project.ownerId.name,
+          email: project.ownerId.email,
+          institution: project.ownerId.institution,
+          department: project.ownerId.department
+        },
+        createdAt: project.createdAt
+      })),
+      recentReviews: recentReviews.map(review => ({
+        id: review._id,
+        projectTitle: review.projectId?.title,
+        projectCode: review.projectId?.uniqueCode,
+        decision: review.decision,
+        comment: review.comment?.substring(0, 100),
+        reviewedAt: review.reviewedAt
+      }))
     });
 
   } catch (error) {

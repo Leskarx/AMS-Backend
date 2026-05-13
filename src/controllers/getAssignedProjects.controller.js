@@ -12,31 +12,48 @@ const getAssignedProjects = async (req, res, next) => {
       status: { $ne: "DRAFT" }, // Exclude drafts
     };
 
-    if (status && ["PENDING", "APPROVED", "REJECTED"].includes(status)) {
+    // Updated status values to match new schema
+    if (status && ["SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED", "REVISION_REQUIRED"].includes(status)) {
       query.status = status;
     }
 
-    // Search by project title
+    // Search by project title or uniqueCode
     if (search) {
-      query.title = {
-        $regex: search,
-        $options: "i",
-      };
+      query.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { uniqueCode: { $regex: search, $options: "i" } }
+      ];
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const [projects, total] = await Promise.all([
       Project.find(query)
-        .populate("ownerId", "name email")
+        .populate("ownerId", "name email institution department")
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(parseInt(limit)),
+        .limit(parseInt(limit))
+        .select("uniqueCode title discipline status similarityScore createdAt stationOrCollege"),
       Project.countDocuments(query),
     ]);
 
     return res.status(200).json({
-      projects,
+      projects: projects.map(project => ({
+        id: project._id,
+        uniqueCode: project.uniqueCode,
+        title: project.title,
+        discipline: project.discipline,
+        stationOrCollege: project.stationOrCollege,
+        status: project.status,
+        similarityScore: project.similarityScore,
+        submittedBy: {
+          name: project.ownerId.name,
+          email: project.ownerId.email,
+          institution: project.ownerId.institution,
+          department: project.ownerId.department
+        },
+        createdAt: project.createdAt
+      })),
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / parseInt(limit)),
