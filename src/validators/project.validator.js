@@ -81,6 +81,4 @@ export const createProjectSchema = z.object({
     })
   ).optional().default([])
 
-}); 
-// Note: Intentionally leaving off .strict() here so Zod silently strips any 
-// injected fields (like uniqueCode) rather than crashing the request.
+});

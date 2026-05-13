@@ -2,14 +2,44 @@ import Project from "../models/project.schema.js";
 import ApiError from "../utils/ApiError.js";
 import { runSimilarityCheckInBackground } from "../services/similarity.worker.js";
 
+// Helper to abbreviate strings (e.g., "COMPUTER_SCIENCE" -> "CS", "Delhi" -> "DEL")
+const getAbbreviation = (str) => {
+  if (!str) return "XXX";
+  const words = str.split(/[\s_]+/);
+  if (words.length > 1) {
+    return words.map(w => w[0]).join("").toUpperCase();
+  }
+  return str.substring(0, 3).toUpperCase();
+};
+
 export const createProject = async (req, res, next) => {
   try {
+    // --- NEW LOGIC FOR UNIQUE ID GENERATION ---
+    const { stationOrCollege, year, discipline } = req.body;
+    
+    let generatedUniqueCode = null;
+    
+    if (stationOrCollege && year && discipline) {
+      const stationCode = getAbbreviation(stationOrCollege);
+      const disciplineCode = getAbbreviation(discipline);
+      
+      // Count existing projects for this exact combination to get Serial No
+      const existingCount = await Project.countDocuments({
+        stationOrCollege,
+        year,
+        discipline
+      });
+      
+      const serialNo = (existingCount + 1).toString().padStart(3, '0');
+      generatedUniqueCode = `${stationCode}/${year}/${disciplineCode}/${serialNo}`;
+    }
+    // -------------------------------------------
+
     const projectData = {
       ...req.body,
       ownerId: req.user.userId, 
       status: "DRAFT",
-      // Generate unique code if not provided
-      uniqueCode: req.body.uniqueCode || `PROJ-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`
+      uniqueCode: req.body.uniqueCode || generatedUniqueCode || `PROJ-${Date.now()}`
     };
 
     // Save project to database
