@@ -20,6 +20,10 @@ const userSchema = new mongoose.Schema(
       enum: ["SCIENTIST", "REVIEWER", "ADMIN"],
       required: true,
     },
+
+    expertise: {
+      type: String
+    }
   },
   { timestamps: true }
 );

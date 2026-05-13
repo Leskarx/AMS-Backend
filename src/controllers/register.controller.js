@@ -12,7 +12,7 @@ async function registerController(req, res, next) {
     }
 
     // Remove password from frontend input
-    const { name, email, role } = parsed.data;
+    const { name, email, role, expertise } = parsed.data;
 
     // Default password
     const defaultPassword = "default1234";
@@ -32,7 +32,9 @@ async function registerController(req, res, next) {
       name,
       email,
       password: hashedPassword,
-      role
+      role,
+
+      expertise: role === "REVIEWER" ? expertise : undefined,
     });
 
     return res.status(201).json({
@@ -42,10 +44,9 @@ async function registerController(req, res, next) {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
-      }
+        role: user.role,
+      },
     });
-
   } catch (error) {
     next(error);
   }
