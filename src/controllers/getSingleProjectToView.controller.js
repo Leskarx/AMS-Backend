@@ -2,9 +2,8 @@ import Project from "../models/project.schema.js";
 import Similarity from "../models/similarity.schema.js";
 import Review from "../models/review.schema.js";
 
-
 // Get single project for scientist or admin
- const getSingleProject = async (req, res, next) => {
+const getSingleProject = async (req, res, next) => {
   try {
     const { projectId } = req.params;
     const userId = req.user.userId;
@@ -12,8 +11,8 @@ import Review from "../models/review.schema.js";
 
     // Find the project
     const project = await Project.findById(projectId)
-      .populate("ownerId", "name email")
-      .populate("assignedReviewerId", "name email");
+      .populate("ownerId", "name email institution department")
+      .populate("assignedReviewerId", "name email institution");
 
     if (!project) {
       return res.status(404).json({ message: "Project not found" });
@@ -31,16 +30,20 @@ import Review from "../models/review.schema.js";
 
     // Get similarity results
     const similarity = await Similarity.findOne({ projectId })
-      .populate("matches.projectId", "title");
+      .populate("matches.projectId", "title uniqueCode");
 
     // Get reviews for this project
     const reviews = await Review.find({ projectId })
-      .populate("reviewerId", "name email")
-      .sort({ createdAt: -1 });
+      .populate("reviewerId", "name email institution")
+      .sort({ reviewedAt: -1 });
 
     // Prepare response
     const responseData = {
       id: project._id,
+      uniqueCode: project.uniqueCode,
+      version: project.version,
+      proposalType: project.proposalType,
+      stationOrCollege: project.stationOrCollege,
       title: project.title,
       discipline: project.discipline || "Not specified",
       year: project.year,
@@ -50,25 +53,34 @@ import Review from "../models/review.schema.js";
       expectedOutcome: project.expectedOutcome,
       objectives: project.objectives,
       budget: project.budget,
+      scientistInvolve: project.scientistInvolve,
       similarityScore: project.similarityScore || 0,
+      finalComment: project.finalComment,
       createdAt: project.createdAt,
       updatedAt: project.updatedAt,
+      approvedAt: project.approvedAt,
+      rejectedAt: project.rejectedAt,
       submittedBy: {
         id: project.ownerId._id,
         name: project.ownerId.name,
-        email: project.ownerId.email
+        email: project.ownerId.email,
+        institution: project.ownerId.institution,
+        department: project.ownerId.department
       },
       assignedReviewer: project.assignedReviewerId ? {
         id: project.assignedReviewerId._id,
         name: project.assignedReviewerId.name,
-        email: project.assignedReviewerId.email
+        email: project.assignedReviewerId.email,
+        institution: project.assignedReviewerId.institution
       } : null
     };
 
     // Add similarity matches if exists
-    if (similarity && similarity.matches.length > 0) {
+    if (similarity && similarity.matches && similarity.matches.length > 0) {
       responseData.similarityMatches = similarity.matches.slice(0, 3).map(match => ({
+        id: match.projectId?._id,
         title: match.projectId?.title || "Unknown",
+        uniqueCode: match.projectId?.uniqueCode,
         score: match.score
       }));
     }
@@ -79,8 +91,13 @@ import Review from "../models/review.schema.js";
         id: review._id,
         decision: review.decision,
         comment: review.comment,
-        reviewedBy: review.reviewerId.name,
-        reviewedAt: review.createdAt
+        score: review.score,
+        reviewedBy: {
+          name: review.reviewerId.name,
+          email: review.reviewerId.email,
+          institution: review.reviewerId.institution
+        },
+        reviewedAt: review.reviewedAt
       }));
     }
 
