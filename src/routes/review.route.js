@@ -37,7 +37,6 @@ router.get("/project/:projectId", getProjectForReview);
 // Submit review (approve/reject)
 router.post(
   "/project/:projectId/review",
-  validate(submitReviewSchema),
   submitReviewController
 );
 

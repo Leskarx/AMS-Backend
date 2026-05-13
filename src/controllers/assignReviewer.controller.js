@@ -2,7 +2,7 @@ import ApiError from "../utils/ApiError.js";
 import Project from "../models/project.schema.js";
 import User from "../models/user.schema.js";
 
- const assignReviewer = async (req, res, next) => {
+const assignReviewer = async (req, res, next) => {
   try {
     const { projectId } = req.params;
     const { reviewerId } = req.body;
@@ -13,7 +13,7 @@ import User from "../models/user.schema.js";
       throw new ApiError("Project not found", 404);
     }
     
-    // Check if project is already approved or rejected
+    // Check if project is already approved, rejected, or under revision
     if (project.status === "APPROVED" || project.status === "REJECTED") {
       throw new ApiError(`Cannot assign reviewer to a ${project.status.toLowerCase()} project`, 400);
     }
@@ -21,7 +21,7 @@ import User from "../models/user.schema.js";
     // Find the reviewer
     const reviewer = await User.findById(reviewerId);
     if (!reviewer) {
-      throw new ApiError("Reviewer not found", 404);assignReviewer
+      throw new ApiError("Reviewer not found", 404);
     }
     
     // Check if user has REVIEWER role
@@ -32,9 +32,9 @@ import User from "../models/user.schema.js";
     // Assign reviewer to project
     project.assignedReviewerId = reviewerId;
     
-    // If project is DRAFT, change to PENDING when assigning reviewer
+    // If project is DRAFT, change to SUBMITTED when assigning reviewer
     if (project.status === "DRAFT") {
-      project.status = "PENDING";
+      project.status = "SUBMITTED";
     }
     
     await project.save();
@@ -46,6 +46,7 @@ import User from "../models/user.schema.js";
       message: "Reviewer assigned successfully",
       project: {
         id: project._id,
+        uniqueCode: project.uniqueCode,
         title: project.title,
         status: project.status,
         assignedReviewer: project.assignedReviewerId
