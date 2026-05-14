@@ -37,6 +37,8 @@ const assignReviewer = async (req, res, next) => {
     // Assign reviewer to project and change status to UNDER_REVIEW
     project.assignedReviewerId = reviewerId;
     project.status = "UNDER_REVIEW";
+    project.assignedAt = new Date();      // Track when reviewer was assigned
+    project.underReviewAt = new Date();   // Track when project entered under review status
     
     await project.save();
     
@@ -50,7 +52,9 @@ const assignReviewer = async (req, res, next) => {
         uniqueCode: project.uniqueCode,
         title: project.title,
         status: project.status,
-        assignedReviewer: project.assignedReviewerId
+        assignedReviewer: project.assignedReviewerId,
+        assignedAt: project.assignedAt,
+        underReviewAt: project.underReviewAt
       }
     });
     

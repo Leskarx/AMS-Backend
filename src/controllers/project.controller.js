@@ -39,7 +39,8 @@ export const createProject = async (req, res, next) => {
       ...req.body,
       ownerId: req.user.userId, 
       status: "SUBMITTED",
-      uniqueCode: req.body.uniqueCode || generatedUniqueCode || `PROJ-${Date.now()}`
+      uniqueCode: req.body.uniqueCode || generatedUniqueCode || `PROJ-${Date.now()}`,
+      submittedAt: new Date() // Set submitted timestamp when project is created
     };
 
     // Save project to database
@@ -56,7 +57,8 @@ export const createProject = async (req, res, next) => {
         title: savedProject.title,
         status: savedProject.status,
         ownerId: savedProject.ownerId,
-        createdAt: savedProject.createdAt
+        createdAt: savedProject.createdAt,
+        submittedAt: savedProject.submittedAt
       },
       similarityStatus: "processing"
     });
@@ -169,6 +171,7 @@ export const submitProject = async (req, res, next) => {
     }
 
     project.status = "SUBMITTED";
+    project.submittedAt = new Date(); // Set submitted timestamp
 
     await project.save();
 
@@ -179,6 +182,7 @@ export const submitProject = async (req, res, next) => {
         uniqueCode: project.uniqueCode,
         title: project.title,
         status: project.status,
+        submittedAt: project.submittedAt
       }
     });
 

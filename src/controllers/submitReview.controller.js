@@ -69,6 +69,7 @@ const submitReview = async (req, res, next) => {
       updateData.rejectedAt = new Date();
       updateData.finalComment = comment.trim();
     } else if (decision === "REVISION_REQUIRED") {
+      updateData.revisionRequestedAt = new Date(); // Set revision requested timestamp
       updateData.finalComment = comment.trim();
     }
     
