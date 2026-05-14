@@ -20,7 +20,7 @@ const scientistSchema = new mongoose.Schema(
       min: 0,
     },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const projectSchema = new mongoose.Schema(
@@ -69,7 +69,7 @@ const projectSchema = new mongoose.Schema(
         "Soil Science",
         "Crop Science",
         "Forestry",
-        "Food Technology"
+        "Food Technology",
       ],
       required: true,
     },
@@ -190,6 +190,14 @@ const projectSchema = new mongoose.Schema(
       trim: true,
     },
 
+    submittedAt: Date,
+
+    assignedAt: Date,
+
+    underReviewAt: Date,
+
+    revisionRequestedAt: Date,
+
     approvedAt: Date,
 
     rejectedAt: Date,
@@ -205,7 +213,7 @@ const projectSchema = new mongoose.Schema(
       max: 100,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // =================================

@@ -13,6 +13,13 @@ import { getUnassignedProposals,
           getReviewersWithWorkload
 } from "../controllers/reviewerProposalManagement.controller.js";
 
+import {
+  getAllProjects,
+  getProjectById,
+  deleteProject,
+  getProjectStatistics
+} from "../controllers/proposalManagement.controller.js";
+
 const router = Router();
 
 // All user management routes require admin access
@@ -40,7 +47,25 @@ router.get(
     getReviewersWithWorkload
   );
 
-  // proposal management
-  
+// proposal management
+router.get(
+  "/projects/statistics",
+  getProjectStatistics
+);
+
+router.get(
+  "/projects",
+  getAllProjects
+);
+
+router.get(
+  "/projects/:projectId",
+  getProjectById
+);
+
+router.delete(
+  "/projects/:projectId",
+  deleteProject
+);
 
 export default router;
