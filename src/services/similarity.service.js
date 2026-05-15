@@ -7,6 +7,7 @@ export const checkSimilarityWithPythonServer = async (projectData) => {
   try {
     const searchPayload = {
       title: projectData.title || "",
+      discipline: projectData.discipline || "",
       introduction: projectData.introduction || "",
       actionPlan: projectData.actionPlan || "",
       expectedOutcome: projectData.expectedOutcome || "",
