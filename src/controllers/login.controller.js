@@ -2,7 +2,7 @@ import ApiError from "../utils/ApiError.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { loginSchema } from "../validators/auth.validator.js";
-import User from "../models/user.schema.js"; 
+import User from "../models/user.schema.js";
 
 async function loginUser(req, res, next) {
   try {
@@ -20,7 +20,7 @@ async function loginUser(req, res, next) {
 
     // Find user by email using Mongoose
     const savedUser = await User.findOne({ email });
-    
+
     if (!savedUser) {
       throw new ApiError("Invalid credentials", 401);
     }
@@ -33,27 +33,27 @@ async function loginUser(req, res, next) {
 
     // Generate JWT token
     const token = jwt.sign(
-      { 
-        userId: savedUser._id,  // Mongoose uses _id instead of id
+      {
+        userId: savedUser._id, // Mongoose uses _id instead of id
         email: savedUser.email,
-        role: savedUser.role 
+        role: savedUser.role,
       },
       process.env.JWT_SECRET,
-      { expiresIn: "90d" }
+      { expiresIn: "90d" },
     );
 
     // Return success response
     return res.status(200).json({
       message: "login success",
       user: {
-        id: savedUser._id,      // Mongoose uses _id
+        id: savedUser._id, // Mongoose uses _id
         email: savedUser.email,
-        name: savedUser.name,   // Include name from your schema
-        role: savedUser.role    // Include role for frontend authorization
+        name: savedUser.name, // Include name from your schema
+        role: savedUser.role, // Include role for frontend authorization
+        mustResetPassword: savedUser.mustResetPassword,
       },
-      token: token
+      token: token,
     });
-
   } catch (error) {
     next(error);
   }

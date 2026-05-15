@@ -36,8 +36,13 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    
+    mustResetPassword: {
+      type: Boolean,
+      default: false,
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 userSchema.index({ email: 1 });

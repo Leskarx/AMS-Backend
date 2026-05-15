@@ -12,7 +12,8 @@ async function registerController(req, res, next) {
     }
 
     // Destructure with defaults
-    const { name, email, role, expertise, institution, department } = parsed.data;
+    const { name, email, role, expertise, institution, department } =
+      parsed.data;
 
     // Default password
     const defaultPassword = "default1234";
@@ -34,6 +35,7 @@ async function registerController(req, res, next) {
       password: hashedPassword,
       role,
       isActive: true, // Default to active
+      mustResetPassword: true,
     };
 
     // Add role-specific fields
@@ -61,7 +63,7 @@ async function registerController(req, res, next) {
         role: user.role,
         institution: user.institution,
         department: user.department,
-        ...(user.role === "REVIEWER" && { expertise: user.expertise })
+        ...(user.role === "REVIEWER" && { expertise: user.expertise }),
       },
     });
   } catch (error) {

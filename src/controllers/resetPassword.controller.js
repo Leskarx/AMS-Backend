@@ -30,6 +30,8 @@ async function resetPasswordController(req, res, next) {
 
     user.password = hashedPassword;
 
+    user.mustResetPassword = false;
+
     await user.save();
 
     return res.status(200).json({
